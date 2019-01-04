@@ -1,14 +1,10 @@
 import { Api, JsonRpc } from 'eosjs';
-
+import JsSignatureProvider from 'eosjs/dist/eosjs-jssig';
 import ScatterJS from 'scatterjs-core';
 import ScatterEOS from 'scatterjs-plugin-eosjs2';
 
-// Don't forget to tell ScatterJS which plugins you are using.
-ScatterJS.plugins(new ScatterEOS());
-
-// Networks are used to reference certain blockchains.
-// They let you get accounts and help you build signature providers.
-const network = {
+const endpoint2 = 'https://api.kylin.alohaeos.com:443'; // kylin
+const network2 = {
   blockchain: 'eos',
   protocol: 'https',
   host: 'api.kylin.alohaeos.com',
@@ -16,83 +12,80 @@ const network = {
   chainId: '5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191'
 };
 
-async function getScatter() {
-  // First we need to connect to the user's Scatter.
-  ScatterJS.scatter.connect('My EOS Dapp').then(connected => {
-    // If the user does not have Scatter or it is Locked or Closed this will return false;
-    //if (!connected) return false;
+const endpoint = 'http://jungle2.cryptolions.io:80'; // Jungle
+const network = {
+  blockchain: 'eos',
+  protocol: 'http',
+  host: 'jungle2.cryptolions.io',
+  port: 80,
+  chainId: 'e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473' // Jungle
+};
 
-    const scatter = ScatterJS.scatter;
+class EosService {
+  constructor(contractAccount) {
+    this.contractAccount = contractAccount;
 
-    // Now we need to get an identity from the user.
-    // We're also going to require an account that is connected to the network we're using.
-    const requiredFields = { accounts: [network] };
-    scatter
-      .getIdentity(requiredFields)
-      .then(() => {
-        // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
-        // the user for their account name beforehand. They could still give you a different account.
-        const account = scatter.identity.accounts.find(
-          x => x.blockchain === 'eos'
-        );
+    ScatterJS.plugins(new ScatterEOS());
 
-        // You can pass in any additional options you want into the eosjs reference.
-        const eosOptions = { expireInSeconds: 60 };
-
-        // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
-        //const eos = scatter.eos(network, Eos, eosOptions);
-
-        // ----------------------------
-        // Now that we have an identity,
-        // an EOSIO account, and a reference
-        // to an eosjs object we can send a transaction.
-        // ----------------------------
-
-        // Never assume the account's permission/authority. Always take it from the returned account.
-        const transactionOptions = {
-          authorization: [`${account.name}@${account.authority}`]
+    try {
+      ScatterJS.scatter.connect(this.contractAccount).then(connected => {
+        if (!connected) return console.log('Issue Connecting');
+        const scatter = ScatterJS.scatter;
+        const requiredFields = {
+          accounts: [network] // We defined this above
         };
+        scatter.getIdentity(requiredFields).then(() => {
+          this.account = scatter.identity.accounts.find(
+            x => x.blockchain === 'eos'
+          );
 
-        invokeAction('login', scatter.eosHook(network), account.name)
-          .then(resultWithConfig => {
-            return resultWithConfig;
-          })
-          .catch(err => {
-            throw err;
+          const rpc = new JsonRpc(endpoint);
+
+          /*
+          const privateKey =
+            '5HyYW9fLXZt3isexTKRq7v3uzziiqwJ2Sxpp3P1msuAApE7ibWC';
+          const signatureProvider = new JsSignatureProvider([privateKey]);
+
+          this.api = new Api({
+            rpc,
+            signatureProvider,
+            textDecoder: new TextDecoder(),
+            textEncoder: new TextEncoder()
           });
-      })
-      .catch(error => {
-        // The user rejected this request, or doesn't have the appropriate requirements.
-        console.error(error);
-        throw error;
+          */
+
+          this.api = scatter.eos(network, Api, { rpc });
+
+          this.transaction('login');
+        });
+        window.ScatterJS = null;
       });
-  });
-}
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
-async function invokeAction(action, signatureProvider, acc) {
-  const rpc = new JsonRpc(process.env.VUE_APP_NODE_ENDPOINT);
+  transaction = async action => {
+    console.log(this.api);
+    console.log(this.contractAccount);
+    console.log(this.account.name);
+    console.log(this.account.authority);
 
-  const api = new Api({
-    rpc,
-    signatureProvider,
-    textDecoder: new TextDecoder(),
-    textEncoder: new TextEncoder()
-  });
-
-  try {
-    const resultWithConfig = await api.transact(
+    const resultWithConfig = await this.api.transact(
       {
         actions: [
           {
-            account: process.env.VUE_APP_SMART_CONTRACT_NAME,
+            account: this.contractAccount,
             name: action,
             authorization: [
               {
-                actor: acc,
-                permission: 'active'
+                actor: this.account.name,
+                permission: this.account.authority
               }
             ],
-            data: { user: acc }
+            data: {
+              user: this.account.name
+            }
           }
         ]
       },
@@ -101,24 +94,8 @@ async function invokeAction(action, signatureProvider, acc) {
         expireSeconds: 30
       }
     );
-    return resultWithConfig;
-  } catch (err) {
-    throw err;
-  }
-}
-
-class EosService {
-  static login() {
-    return new Promise((resolve, reject) => {
-      getScatter()
-        .then(() => {
-          resolve();
-        })
-        .catch(err => {
-          reject(err);
-        });
-    });
-  }
+    console.log(resultWithConfig);
+  };
 }
 
 export default EosService;

@@ -29,18 +29,13 @@ export default {
   data() {
     return {
       accountName: '',
-      privateKey: ''
+      privateKey: '',
+      eosio: ''
     };
   },
   methods: {
-    handleLogin: function() {
-      EosService.login()
-        .then(() => {
-          this.$router.push('home');
-        })
-        .catch(err => {
-          alert(err.toString());
-        });
+    handleLogin: async function() {
+      this.eosio = new EosService(process.env.VUE_APP_SMART_CONTRACT_NAME);
     }
   }
 };
