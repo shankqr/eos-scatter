@@ -30,12 +30,19 @@ export default {
     return {
       accountName: '',
       privateKey: '',
-      eosio: ''
+      eosio: null
     };
   },
   methods: {
     handleLogin: async function() {
-      this.eosio = new EosService(process.env.VUE_APP_SMART_CONTRACT_NAME);
+      if (this.eosio === null) {
+        this.eosio = new EosService(
+          process.env.VUE_APP_DAPP_NAME,
+          process.env.VUE_APP_SMART_CONTRACT_NAME
+        );
+      }
+      await this.eosio.connect();
+      await this.eosio.transaction('login', { user: this.eosio.account.name });
     }
   }
 };

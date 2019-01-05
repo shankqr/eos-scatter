@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.0.0-rc.1",
-    "eosjs": "^20.0.0-beta3",
+    "eosjs": "20.0.0-beta2",
     "scatterjs-core": "^2.6.0",
     "scatterjs-plugin-eosjs2": "^1.2.0",
     "vue": "^2.5.21",
