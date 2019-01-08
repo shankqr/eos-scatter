@@ -31,6 +31,10 @@ class EosService {
         e => e.blockchain === 'eos'
       );
     });
+
+    if (this.account === null) return false;
+
+    return true;
   };
 
   transaction = async (action, data) => {
@@ -60,6 +64,7 @@ class EosService {
       }
     );
     console.log(resultWithConfig);
+    return true;
   };
 }
 

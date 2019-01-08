@@ -41,8 +41,16 @@ export default {
           process.env.VUE_APP_SMART_CONTRACT_NAME
         );
       }
-      await this.eosio.connect();
-      await this.eosio.transaction('login', { user: this.eosio.account.name });
+
+      if (!(await this.eosio.connect()))
+        return console.log('Failed to get Scatter account');
+
+      if (
+        await this.eosio.transaction('login', { user: this.eosio.account.name })
+      ) {
+        this.$store.commit('loginStatus', true);
+        this.$router.push('home');
+      }
     }
   }
 };
